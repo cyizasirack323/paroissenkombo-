@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paroisse Nkombo | QR Attendance System</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  :root{--green:#1a7a4a;--green-light:#e8f5ee;--green-mid:#2ea86a;--dark:#0f2d1f;--gray:#6b7280;--border:#d1d5db;--red:#dc2626;}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f7f4;min-height:100vh;color:var(--dark);}
+  header{background:var(--green);color:white;padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.25);}
+  header h1{font-size:1.05rem;font-weight:700;}
+  header span{font-size:.8rem;opacity:.8;}
+  header .header-subtitle{display:block;font-size:.72rem;opacity:.85;margin-top:2px;}
+  .tabs{display:flex;background:var(--dark);padding:0 16px;overflow-x:auto;}
+  .tab{padding:12px 16px;color:rgba(255,255,255,.6);cursor:pointer;font-size:.8rem;font-weight:600;border-bottom:3px solid transparent;transition:all .2s;user-select:none;white-space:nowrap;}
+  .tab.active{color:white;border-bottom-color:var(--green-mid);}
+  .tab:hover:not(.active){color:rgba(255,255,255,.85);}
+  .panel{display:none;padding:24px 20px;max-width:860px;margin:0 auto;}.panel.active{display:block;}
+  .card{background:white;border-radius:12px;padding:24px;box-shadow:0 1px 6px rgba(0,0,0,.08);margin-bottom:20px;}
+  .card h2{font-size:.95rem;font-weight:700;color:var(--green);margin-bottom:18px;display:flex;align-items:center;gap:8px;}
+  /* QR */
+  .qr-wrapper{display:flex;flex-direction:column;align-items:center;gap:16px;}
+  #qrcode{background:#fff;padding:20px;border-radius:12px;border:1px solid #d1d5db;display:inline-block;}
+  #qrcode canvas,#qrcode img{display:block;}
+  .qr-label{text-align:center;font-size:.82rem;color:var(--gray);max-width:260px;line-height:1.5;}
+  .qr-url{background:var(--green-light);border:1px solid #b6dfca;border-radius:8px;padding:10px 16px;font-size:.78rem;color:var(--green);font-family:monospace;word-break:break-all;width:100%;text-align:center;}
+  /* Buttons */
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:8px;font-size:.88rem;font-weight:600;cursor:pointer;border:none;transition:all .15s;}
+  .btn-primary{background:var(--green);color:white;}.btn-primary:hover{background:var(--dark);}
+  .btn-outline{background:white;color:var(--green);border:2px solid var(--green);}.btn-outline:hover{background:var(--green-light);}
+  .btn-danger{background:var(--red);color:white;font-size:.78rem;padding:6px 12px;}
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:6px;}
+  /* Form */
+  .form-group{margin-bottom:16px;}
+  .form-group label{display:block;font-size:.82rem;font-weight:600;color:var(--dark);margin-bottom:6px;}
+  .form-group input,.form-group select{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;transition:border-color .15s;outline:none;background:white;}
+  .form-group input:focus,.form-group select:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(26,122,74,.1);}
+  .time-display{background:var(--green-light);border:1.5px solid #b6dfca;border-radius:8px;padding:11px 14px;font-size:1rem;font-weight:700;color:var(--green);text-align:center;letter-spacing:1px;}
+  /* Success */
+  .success-box{display:none;background:var(--green-light);border:2px solid var(--green-mid);border-radius:12px;padding:24px;text-align:center;}
+  .success-box.show{display:block;}
+  .success-icon{font-size:3rem;margin-bottom:8px;}
+  .success-box h3{color:var(--green);font-size:1.1rem;margin-bottom:4px;}
+  .success-box p{color:var(--gray);font-size:.88rem;}
+  /* Records */
+  .stats-row{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
+  .stat-card{flex:1;min-width:110px;background:var(--green-light);border-radius:10px;padding:14px 18px;text-align:center;}
+  .stat-card .num{font-size:2rem;font-weight:800;color:var(--green);line-height:1;}
+  .stat-card .lbl{font-size:.72rem;color:var(--gray);margin-top:4px;}
+  .tbl-scroll{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:.82rem;min-width:600px;}
+  thead th{background:var(--green);color:white;padding:10px 12px;text-align:left;font-weight:600;}
+  thead th:first-child{border-radius:8px 0 0 0;}thead th:last-child{border-radius:0 8px 0 0;}
+  tbody tr:nth-child(even){background:#f9fafb;}
+  tbody td{padding:9px 12px;border-bottom:1px solid #f0f0f0;vertical-align:middle;}
+  .badge{display:inline-block;padding:2px 10px;border-radius:99px;font-size:.72rem;font-weight:700;}
+  .btn-out{background:#b45309;color:white;}.btn-out:hover{background:#78350f;}
+  .badge-early{background:#fee2e2;color:#991b1b;margin-left:6px;}
+  .badge-on-time{background:#dcfce7;color:#166534;}.badge-late{background:#fef3c7;color:#92400e;}
+  .empty-state{text-align:center;padding:40px;color:var(--gray);font-size:.9rem;}
+  .empty-state .icon{font-size:3rem;margin-bottom:12px;}
+  /* Registration */
+  .reg-intro{background:var(--green-light);border:1px solid #b6dfca;border-radius:10px;padding:14px 16px;font-size:.85rem;color:var(--dark);margin-bottom:20px;line-height:1.6;}
+  /* QR-scanned employee view: show check-in/out only */
+  body.employee-mode .tabs{display:none;}
+  body.employee-mode .panel{display:none !important;}
+  body.employee-mode #tab-checkin{display:block !important;max-width:620px;padding-top:24px;}
+  body.employee-mode header{justify-content:center;text-align:center;}
+  body.employee-mode header #headerTime{display:none;}
+  @media(max-width:480px){.panel{padding:14px 10px;}.card{padding:16px;}.tab{padding:11px 10px;font-size:.76rem;}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>⛪ Paroisse Nkombo</h1><span class="header-subtitle">QR Attendance System</span></div>
+  <span id="headerTime"></span>
+</header>
+<div class="tabs">
+  <div class="tab active" onclick="showTab('qr',this)">📱 QR Code</div>
+  <div class="tab" onclick="showTab('register',this)">📝 Register</div>
+  <div class="tab" onclick="showTab('unenroll',this)">➖ Unenroll Employee</div>
+  <div class="tab" onclick="showTab('checkin',this)">✅ Check-In / Out</div>
+  <div class="tab" onclick="showTab('records',this)">📊 Records</div>
+  <div class="tab" onclick="showTab('setup',this)">⚙️ Settings</div>
+</div>
+
+<!-- QR TAB -->
+<div class="panel active" id="tab-qr">
+  <div class="card">
+    <h2>📱 Attendance QR Code</h2>
+    <div class="qr-wrapper">
+      <div id="qrcode"></div>
+      <div class="qr-label">Employees scan this QR Code to be directed to the check-in page. (Print it black on white, at least 5 cm wide.)</div>
+      <div class="qr-url" id="qrUrlDisplay">—</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="downloadQR()">⬇️ Download QR Code</button>
+        <button class="btn btn-outline" onclick="printQR()">🖨️ Print</button>
+      </div>
+      <a id="dlLink" style="display:none"></a>
+    </div>
+  </div>
+</div>
+
+<!-- REGISTRATION TAB -->
+<div class="panel" id="tab-register">
+  <div class="card" id="regCard">
+    <h2>📝 Register Once</h2>
+    <div class="reg-intro">
+      ℹ️ This is a <strong>one-time registration</strong> only. After registering, each day you just scan the QR Code and you will appear in the list without filling in anything.
+    </div>
+    <div class="form-group">
+      <label>👤 Full Name *</label>
+      <input type="text" id="regName" placeholder="E.g.: Mugisha Jean Pierre" autocomplete="name"/>
+    </div>
+    <div class="form-group">
+      <label>💼 Job Position *</label>
+      <input type="text" id="regPosition" placeholder="E.g.: Accountant, Teacher, Driver..."/>
+    </div>
+    <div class="form-group">
+      <label>📞 Phone Number *</label>
+      <input type="tel" id="regPhone" placeholder="E.g.: 078xxxxxxx" autocomplete="tel"/>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:14px;" id="regBtn" onclick="submitRegistration()">
+      ✅ Register
+    </button>
+  </div>
+  <div class="success-box" id="regSuccess">
+    <div class="success-icon">🎉</div>
+    <h3 id="regSuccessName"></h3>
+    <p>You have registered successfully! From now on, just scan the QR Code each day.</p>
+    <br>
+    <button class="btn btn-outline" onclick="resetReg()" style="margin:auto;">👤 Another Registration</button>
+  </div>
+</div>
+
+<!-- UNENROLL EMPLOYEE TAB -->
+<div class="panel" id="tab-unenroll">
+  <div class="card">
+    <h2>➖ Unenroll Employee</h2>
+    <div class="form-group">
+      <label>👤 Search Employee Name *</label>
+      <input type="text" id="unenrollSearch" placeholder="Type employee name..." oninput="searchUnenrollEmployee()" autocomplete="off"/>
+    </div>
+    <div id="unenrollResults" style="margin-bottom:16px;"></div>
+    <div id="unenrollSelected" style="display:none;">
+      <div style="background:var(--green-light);border:1px solid #b6dfca;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+        <div style="font-weight:700;font-size:.95rem;" id="unenrollSelName"></div>
+        <div style="font-size:.8rem;color:var(--gray);margin-top:2px;" id="unenrollSelPos"></div>
+      </div>
+      <button class="btn btn-danger" id="unenrollBtn" style="width:100%;justify-content:center;padding:14px;" onclick="confirmUnenrollEmployee()">🗑️ Remove Employee</button>
+      <p style="font-size:.78rem;color:var(--gray);margin-top:10px;text-align:center;">This removes the employee from the registered employees list. Existing attendance records are not intended to be deleted.</p>
+    </div>
+  </div>
+</div>
+
+<!-- CHECK-IN TAB -->
+<div class="panel" id="tab-checkin">
+  <div class="card" id="checkinCard">
+    <h2>✅ Paroisse Nkombo — Check-In / Check-Out</h2>
+    <div class="time-display" id="liveTime" style="margin-bottom:20px;">--:--:--</div>
+    <div class="form-group">
+      <label>👤 Search Your Name *</label>
+      <input type="text" id="searchName" placeholder="Type your name..." oninput="searchEmployee()" autocomplete="off"/>
+    </div>
+    <div id="searchResults" style="margin-bottom:16px;"></div>
+    <div id="selectedEmployee" style="display:none;">
+      <div style="background:var(--green-light);border:1px solid #b6dfca;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+        <div style="font-weight:700;font-size:.95rem;" id="selName"></div>
+        <div style="font-size:.8rem;color:var(--gray);margin-top:2px;" id="selPos"></div>
+      </div>
+      <div id="actionArea"></div>
+    </div>
+  </div>
+  <div class="success-box" id="checkinSuccess">
+    <div class="success-icon" id="checkinSuccessIcon">✅</div>
+    <h3 id="checkinSuccessName"></h3>
+    <p id="checkinSuccessPos"></p>
+    <p id="checkinSuccessTime" style="margin-top:6px;"></p>
+    <p id="checkinSuccessStatus" style="margin-top:6px;font-weight:700;"></p>
+    <br>
+    <button class="btn btn-outline" onclick="resetCheckin()" style="margin:auto;">🔄 Next Employee</button>
+  </div>
+</div>
+
+<!-- RECORDS TAB -->
+<div class="panel" id="tab-records">
+  <div class="stats-row">
+    <div class="stat-card"><div class="num" id="statTotal">0</div><div class="lbl">Total Present</div></div>
+    <div class="stat-card"><div class="num" id="statOnTime" style="color:#166534;">0</div><div class="lbl">On Time</div></div>
+    <div class="stat-card"><div class="num" id="statLate" style="color:#92400e;">0</div><div class="lbl">Late</div></div>
+    <div class="stat-card"><div class="num" id="statAbsentees" style="color:#b91c1c;">0</div><div class="lbl">Total Absentees</div></div>
+    <div class="stat-card"><div class="num" id="statOut" style="color:#1d4ed8;">0</div><div class="lbl">Checked Out</div></div>
+  </div>
+  <div class="card">
+    <h2 style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <span>📊 Attendance List</span>
+      <span style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <label for="attendanceDate" style="font-size:.82rem;font-weight:600;">Choose date:</label>
+        <input type="date" id="attendanceDate" onchange="renderTable()" style="padding:9px 10px;border:1px solid #d1d5db;border-radius:8px;font:inherit;">
+        <button class="btn btn-primary" onclick="printAttendance()">🖨️ Print List</button>
+        <button class="btn btn-danger" onclick="clearRecords()">🗑️ Clear Today</button>
+      </span>
+    </h2>
+    <div id="tableContainer"><div class="empty-state"><div class="icon">📭</div>No attendance records yet.</div></div>
+  </div>
+  <div class="card">
+    <h2 style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <span>🚫 Absentees — Not Present</span>
+      <span class="badge" id="absentCount">0</span>
+    </h2>
+    <p style="font-size:.82rem;color:var(--gray);margin:-8px 0 14px;">Registered employees who have no check-in record on the selected date.</p>
+    <div id="absentContainer"><div class="empty-state"><div class="icon">👥</div>No absentee information.</div></div>
+  </div>
+</div>
+
+<!-- SETUP TAB -->
+<div class="panel" id="tab-setup">
+  <div class="card">
+    <h2>⚙️ Organization Settings</h2>
+    <div class="form-group">
+      <label>🏫 Organization Name</label>
+      <input type="text" id="orgName" placeholder="Paroisse Nkombo"/>
+    </div>
+    <div class="form-group">
+      <label>⏰ Work Start Time</label>
+      <input type="time" id="startTime" value="08:00"/>
+    </div>
+    <div class="form-group">
+      <label>🏁 Work End Time</label>
+      <input type="time" id="endTime" value="17:00"/>
+    </div>
+    <div class="form-group">
+      <label>⚠️ Grace Period (minutes)</label>
+      <input type="number" id="graceMinutes" value="15" min="0" max="60"/>
+    </div>
+    <button class="btn btn-primary" onclick="saveSetup()">💾 Save</button>
+    <span id="saveMsg" style="font-size:.82rem;color:var(--green);margin-left:12px;display:none;">✓ Saved!</span>
+  </div>
+  <div class="card">
+    <h2>👥 Registered Employees</h2>
+    <div id="empListContainer"><div class="empty-state"><div class="icon">👤</div>No employee has registered yet.</div></div>
+  </div>
+  <div class="card">
+    <h2 style="color:#dc2626;">🗑️ Test Data Cleanup</h2>
+    <p style="font-size:.85rem;color:var(--gray);line-height:1.6;margin-bottom:14px;">This permanently deletes all registered employees and all attendance records from every date. Organization settings and Admin PIN are kept.</p>
+    <button class="btn btn-danger" style="padding:12px 16px;" id="clearAllTestDataBtn" onclick="clearAllTestData()">Delete All Employees and Attendance Records</button>
+  </div>
+</div>
+
+<script>
+// ═══ SETTINGS ═══
+// Paste the Google Apps Script "Web app URL" here (ends with /exec):
+const API_URL='https://script.google.com/macros/s/AKfycbyRoUf2dVgW8ezf28K9JT__d_66qj_zR7eHxQ1DiEkXn2QeuhbGFdegW4dntYvoU8KVbw/exec';
+
+// ═══ STATE ═══
+let config={orgName:'Paroisse Nkombo',startTime:'08:00',endTime:'17:00',graceMinutes:15};
+let employees=[];            // public list: name + position
+let adminEmployees=[],adminRecords=[],serverToday='';
+let selectedEmp=null,todayRec=null,lastMatches=[],unenrollMatches=[],selectedUnenrollEmp=null;
+let PIN=sessionStorage.getItem('att_pin')||'';
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function pad(n){return String(n).padStart(2,'0');}
+function nowStr(){const d=new Date();return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;}
+setInterval(()=>{const t=nowStr();['liveTime','headerTime'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=t;});},1000);
+
+// ═══ SERVER ═══
+async function call(action,data){
+  if(API_URL.indexOf('PASTE_')===0){return{ok:false,error:'NO_URL'};}
+  try{
+    const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({action,pin:PIN},data||{}))});
+    const j=await r.json();
+    if(!j.ok&&j.error==='BAD_PIN'){PIN='';sessionStorage.removeItem('att_pin');}
+    return j;
+  }catch(e){return{ok:false,error:'NETWORK'};}
+}
+function errMsg(j){
+  const m={NETWORK:'Connection problem. Check your internet and try again.',NO_URL:'System is not connected to Google Sheet yet (API_URL missing).',
+    BAD_PIN:'Wrong PIN.',MISSING:'Please fill in everything.',
+    ALREADY_REGISTERED:'This name has already registered.',NOT_FOUND:'Employee not found. Please register first.',
+    NOT_IN:'You have not checked in today.',SERVER:'Server error. Try again.'};
+  return m[j.error]||('Error: '+j.error);
+}
+async function loadPublic(){
+  const j=await call('init');
+  if(j.ok){config=Object.assign(config,j.config);employees=j.employees;loadSetup();}
+  else{const r=document.getElementById('searchResults');if(r)r.innerHTML=`<div style="font-size:.82rem;color:#dc2626;padding:8px;">${esc(errMsg(j))}</div>`;}
+}
+async function ensureAdmin(){
+  if(!PIN){const p=prompt('Admin PIN:');if(!p)return false;PIN=p.trim();}
+  const j=await call('adminData');
+  if(!j.ok){alert(errMsg(j));return false;}
+  sessionStorage.setItem('att_pin',PIN);
+  config=Object.assign(config,j.config);adminEmployees=j.employees;adminRecords=j.records;serverToday=j.today;
+  return true;
+}
+
+// ═══ TABS ═══
+async function showTab(name,el){
+  if(name==='records'||name==='setup'||name==='unenroll'){if(!(await ensureAdmin()))return;}
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  el.classList.add('active');
+  if(name==='records')renderTable();
+  if(name==='qr')renderQR();
+  if(name==='setup'){loadSetup();renderEmpList();}
+  if(name==='unenroll'){resetUnenroll();}
+}
+
+// ═══ QR ═══
+function getCheckinURL(){return window.location.href.split('#')[0].split('?')[0]+'#checkin';}
+function syncEmployeeMode(){document.body.classList.toggle('employee-mode',location.hash==='#checkin');}
+window.addEventListener('hashchange',syncEmployeeMode);
+function renderQR(){
+  const url=getCheckinURL();
+  document.getElementById('qrUrlDisplay').textContent=url;
+  const el=document.getElementById('qrcode');el.innerHTML='';
+  new QRCode(el,{text:url,width:300,height:300,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+}
+function qrWithMargin(){
+  const c=document.querySelector('#qrcode canvas');if(!c)return null;
+  const m=48,o=document.createElement('canvas');o.width=c.width+2*m;o.height=c.height+2*m;
+  const x=o.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,o.width,o.height);x.imageSmoothingEnabled=false;x.drawImage(c,m,m);return o;
+}
+function downloadQR(){
+  setTimeout(()=>{
+    const c=qrWithMargin();if(!c){alert('Please try again.');return;}
+    const a=document.getElementById('dlLink');a.href=c.toDataURL('image/png');a.download='QR-Attendance.png';a.click();
+  },400);
+}
+function printQR(){
+  const c=qrWithMargin();if(!c)return;
+  const img=c.toDataURL('image/png');
+  const w=window.open('','_blank');
+  w.document.write(`<html><body style="text-align:center;padding:40px;font-family:sans-serif;">
+    <h2>${esc(config.orgName)}</h2><p style="margin:8px 0 20px;color:#333;">Scan here to check in to work</p>
+    <img src="${img}" style="width:360px;height:360px;"/>
+    <p style="margin-top:20px;font-size:13px;color:#555;">Work starts: ${esc(config.startTime)} · Work ends: ${esc(config.endTime)}</p>
+    <script>window.onload=function(){window.print();}<\/script></body></html>`);
+  w.document.close();
+}
+
+// ═══ REGISTRATION ═══
+async function submitRegistration(){
+  const name=document.getElementById('regName').value.trim();
+  const pos=document.getElementById('regPosition').value.trim();
+  const phone=document.getElementById('regPhone').value.trim();
+  if(!name){alert('Please enter your full name.');return;}
+  if(!pos){alert('Please enter your job position.');return;}
+  if(!phone){alert('Please enter your phone number.');return;}
+  const btn=document.getElementById('regBtn');btn.disabled=true;btn.textContent='Please wait...';
+  const j=await call('register',{name,position:pos,phone});
+  btn.disabled=false;btn.textContent='✅ Register';
+  if(!j.ok){alert(errMsg(j));return;}
+  employees.push({name,position:pos});
+  document.getElementById('regCard').style.display='none';
+  document.getElementById('regSuccess').classList.add('show');
+  document.getElementById('regSuccessName').textContent=`${name} has registered successfully!`;
+}
+function resetReg(){
+  document.getElementById('regName').value='';
+  document.getElementById('regPosition').value='';
+  document.getElementById('regPhone').value='';
+  document.getElementById('regCard').style.display='block';
+  document.getElementById('regSuccess').classList.remove('show');
+}
+
+// ═══ CHECK-IN / OUT ═══
+function searchEmployee(){
+  const q=document.getElementById('searchName').value.trim().toLowerCase();
+  const res=document.getElementById('searchResults');
+  document.getElementById('selectedEmployee').style.display='none';selectedEmp=null;
+  if(q.length<2){res.innerHTML='';return;}
+  lastMatches=employees.filter(e=>e.name.toLowerCase().includes(q));
+  if(!lastMatches.length){res.innerHTML=`<div style="font-size:.82rem;color:var(--gray);padding:8px;">No one found with that name. Please register first.</div>`;return;}
+  res.innerHTML=lastMatches.map((e,i)=>`
+    <div onclick="selectEmployee(${i})" style="padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;margin-bottom:8px;background:white;">
+      <div style="font-weight:700;font-size:.9rem;">${esc(e.name)}</div>
+      <div style="font-size:.78rem;color:var(--gray);">${esc(e.position)}</div>
+    </div>`).join('');
+}
+async function selectEmployee(i){
+  selectedEmp=lastMatches[i];if(!selectedEmp)return;
+  document.getElementById('searchResults').innerHTML='';
+  document.getElementById('searchName').value=selectedEmp.name;
+  document.getElementById('selName').textContent=selectedEmp.name;
+  document.getElementById('selPos').textContent=selectedEmp.position;
+  document.getElementById('selectedEmployee').style.display='block';
+  const a=document.getElementById('actionArea');
+  a.innerHTML='<div style="text-align:center;color:var(--gray);font-size:.85rem;">Loading...</div>';
+  const j=await call('status',{name:selectedEmp.name});
+  if(!j.ok){a.innerHTML=`<div style="color:#dc2626;font-size:.85rem;text-align:center;">${esc(errMsg(j))}</div>`;return;}
+  todayRec=j.rec;renderAction();
+}
+function renderAction(){
+  const a=document.getElementById('actionArea');if(!selectedEmp)return;
+  const rec=todayRec;
+  if(!rec){
+    a.innerHTML=`<button class="btn btn-primary" style="width:100%;justify-content:center;padding:14px;" onclick="confirmCheckin()">✅ Confirm Check-In</button>`;
+  }else if(!rec.timeOut){
+    a.innerHTML=`<div style="font-size:.82rem;color:var(--gray);margin-bottom:10px;text-align:center;">Checked in today at <strong>${esc(rec.time)}</strong></div><button class="btn btn-out" style="width:100%;justify-content:center;padding:14px;" onclick="confirmCheckout()">👋 Confirm Check-Out</button>`;
+  }else{
+    a.innerHTML=`<div style="text-align:center;font-size:.88rem;color:#166534;font-weight:600;">✔ Done for today<br><span style="font-weight:400;color:var(--gray);">In: ${esc(rec.time)} · Out: ${esc(rec.timeOut)}</span></div>`;
+  }
+}
+function showSuccess(icon,title,line2,line3,status,color){
+  document.getElementById('checkinCard').style.display='none';
+  document.getElementById('checkinSuccess').classList.add('show');
+  document.getElementById('checkinSuccessIcon').textContent=icon;
+  document.getElementById('checkinSuccessName').textContent=title;
+  document.getElementById('checkinSuccessPos').textContent=line2;
+  document.getElementById('checkinSuccessTime').textContent=line3;
+  const ss=document.getElementById('checkinSuccessStatus');ss.textContent=status;ss.style.color=color;
+}
+async function confirmCheckin(){
+  if(!selectedEmp)return;
+  const a=document.getElementById('actionArea');a.innerHTML='<div style="text-align:center;color:var(--gray);">Please wait...</div>';
+  const j=await call('checkin',{name:selectedEmp.name});
+  if(!j.ok){
+    if(j.error==='ALREADY_IN'){todayRec=j.rec;renderAction();alert(`${selectedEmp.name} has already checked in today at ${j.rec.time}.`);return;}
+    renderAction();alert(errMsg(j));return;
+  }
+  const r=j.rec,c=j.config||config,late=r.status==='Late';
+  showSuccess('✅',`Welcome, ${selectedEmp.name}!`,selectedEmp.position,`Arrived at ${r.time} — ${r.date}`,
+    late?`⚠️ You were late — work starts at ${c.startTime} and ends at ${c.endTime}`:'✅ You arrived on time!',late?'#92400e':'#166534');
+}
+async function confirmCheckout(){
+  if(!selectedEmp)return;
+  const a=document.getElementById('actionArea');a.innerHTML='<div style="text-align:center;color:var(--gray);">Please wait...</div>';
+  const j=await call('checkout',{name:selectedEmp.name});
+  if(!j.ok){
+    if(j.error==='ALREADY_OUT'){todayRec=j.rec;renderAction();alert(`${selectedEmp.name} already checked out today at ${j.rec.timeOut}.`);return;}
+    renderAction();alert(errMsg(j));return;
+  }
+  const r=j.rec,c=j.config||config;
+  showSuccess('👋',`Goodbye, ${selectedEmp.name}!`,selectedEmp.position,`Left at ${r.timeOut} — ${r.date} (arrived ${r.time})`,
+    r.leftEarly?`⚠️ Left before closing time (${c.endTime})`:'✅ Have a good evening!',r.leftEarly?'#991b1b':'#166534');
+}
+function resetCheckin(){
+  document.getElementById('searchName').value='';
+  document.getElementById('searchResults').innerHTML='';
+  document.getElementById('selectedEmployee').style.display='none';
+  selectedEmp=null;todayRec=null;
+  document.getElementById('checkinCard').style.display='block';
+  document.getElementById('checkinSuccess').classList.remove('show');
+  document.getElementById('checkinSuccessIcon').textContent='✅';
+}
+
+// ═══ RECORDS (admin) ═══
+function renderTable(){
+  const dateInput=document.getElementById('attendanceDate');
+  if(dateInput&&!dateInput.value&&serverToday)dateInput.value=serverToday;
+  const selectedDate=dateInput&&dateInput.value?dateInput.value:serverToday;
+  const tr=adminRecords.filter(r=>r.date===selectedDate);
+  const presentNames=new Set(tr.map(r=>String(r.name||'').trim().toLowerCase()));
+  const absentees=adminEmployees.filter(e=>!presentNames.has(String(e.name||'').trim().toLowerCase()));
+  const absentCount=document.getElementById('absentCount');
+  const absentContainer=document.getElementById('absentContainer');
+  if(absentCount)absentCount.textContent=absentees.length;
+  if(absentContainer){
+    if(!absentees.length){
+      absentContainer.innerHTML='<div class="empty-state"><div class="icon">✅</div>No absentees recorded for this date.</div>';
+    }else{
+      const absentRows=absentees.map((e,i)=>`<tr><td>${i+1}</td><td><strong>${esc(e.name)}</strong></td><td>${esc(e.position)||'—'}</td><td><span class="badge badge-late">Absent</span></td></tr>`).join('');
+      absentContainer.innerHTML=`<div class="tbl-scroll"><table><thead><tr><th>#</th><th>Name</th><th>Position</th><th>Status</th></tr></thead><tbody>${absentRows}</tbody></table></div>`;
+    }
+  }
+  const heading=document.querySelector('#tab-records .card h2 > span:first-child');
+  if(heading)heading.textContent=selectedDate===serverToday?"📊 Today's Attendance List":`📊 Attendance List — ${selectedDate}`;
+  document.getElementById('statTotal').textContent=tr.length;
+  document.getElementById('statOnTime').textContent=tr.filter(r=>r.status==='On Time').length;
+  document.getElementById('statLate').textContent=tr.filter(r=>r.status==='Late').length;
+  document.getElementById('statAbsentees').textContent=absentees.length;
+  document.getElementById('statOut').textContent=tr.filter(r=>r.timeOut).length;
+  const c=document.getElementById('tableContainer');
+  if(!tr.length){c.innerHTML=`<div class="empty-state"><div class="icon">📭</div>No attendance records found for ${esc(selectedDate)}.</div>`;return;}
+  const rows=tr.map((r,i)=>`<tr>
+    <td>${i+1}</td><td><strong>${esc(r.name)}</strong></td><td>${esc(r.position)||'—'}</td>
+    <td style="font-family:monospace;">${esc(r.time)}</td>
+    <td style="font-family:monospace;white-space:nowrap;">${r.timeOut?esc(r.timeOut)+(r.leftEarly?'<span class="badge badge-early">Early</span>':''):'<span style="color:var(--gray);">Still in</span>'}</td>
+    <td><span class="badge badge-${r.status==='On Time'?'on-time':'late'}">${esc(r.status)}</span></td>
+  </tr>`).join('');
+  c.innerHTML=`<div class="tbl-scroll"><table><thead><tr><th>#</th><th>Name</th><th>Position</th><th>Check-In</th><th>Check-Out</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function printAttendance(){
+  const dateInput=document.getElementById('attendanceDate');
+  const selectedDate=dateInput&&dateInput.value?dateInput.value:serverToday;
+  const tr=adminRecords.filter(r=>r.date===selectedDate);
+  if(!tr.length){alert('There are no attendance records for '+selectedDate+'.');return;}
+
+  const rows=tr.map((r,i)=>`<tr>
+    <td>${i+1}</td>
+    <td>${esc(r.name)}</td>
+    <td>${esc(r.position)||'—'}</td>
+    <td>${esc(r.time)||'—'}</td>
+    <td>${r.timeOut?esc(r.timeOut):'Still in'}</td>
+    <td>${esc(r.status)||'—'}</td>
+  </tr>`).join('');
+  const presentNames=new Set(tr.map(r=>String(r.name||'').trim().toLowerCase()));
+  const absentees=adminEmployees.filter(e=>!presentNames.has(String(e.name||'').trim().toLowerCase()));
+  const absentRows=absentees.map((e,i)=>`<tr><td>${i+1}</td><td>${esc(e.name)}</td><td>${esc(e.position)||'—'}</td><td>Absent</td></tr>`).join('');
+
+  const w=window.open('','_blank');
+  if(!w){alert('Please allow pop-ups in your browser, then try printing again.');return;}
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Paroisse Nkombo - Attendance List</title>
+    <style>
+      body{font-family:Arial,sans-serif;color:#111;margin:28px;}
+      h1,h2,p{text-align:center;margin:5px 0;}
+      h1{font-size:22px;}h2{font-size:17px;margin-top:8px;}
+      .meta{margin:18px 0 12px;text-align:left;font-size:13px;}
+      table{width:100%;border-collapse:collapse;font-size:12px;}
+      th,td{border:1px solid #555;padding:8px;text-align:left;}
+      th{background:#eee;}
+      @media print{body{margin:15mm;} .no-print{display:none;}}
+    </style></head><body>
+    <h1>Paroisse Nkombo</h1>
+    <h2>QR Attendance System</h2>
+    <p>Attendance List</p>
+    <div class="meta"><strong>Date:</strong> ${esc(selectedDate)}<br>
+    <strong>Total present:</strong> ${tr.length}</div>
+    <table><thead><tr><th>No.</th><th>Full Name</th><th>Position</th><th>Check-In</th><th>Check-Out</th><th>Status</th></tr></thead>
+    <tbody>${rows}</tbody></table>
+    <h2 style="margin-top:24px;">Absentees (${absentees.length})</h2>
+    <table><thead><tr><th>No.</th><th>Full Name</th><th>Position</th><th>Status</th></tr></thead><tbody>${absentRows||'<tr><td colspan="4">No absentees</td></tr>'}</tbody></table>
+    <script>window.onload=function(){window.focus();window.print();}<\/script>
+    </body></html>`);
+  w.document.close();
+}
+
+async function clearRecords(){
+  if(!confirm("Delete TODAY's records only? (Earlier days are kept in the Google Sheet.)"))return;
+  const j=await call('clearToday');
+  if(!j.ok){alert(errMsg(j));return;}
+  await ensureAdmin();renderTable();
+}
+
+
+async function clearAllTestData(){
+  const warning = "WARNING: This will permanently delete ALL registered employees and ALL attendance records from every date. Organization settings and Admin PIN will remain.\n\nContinue only if these are test records and you are sure you want to remove them.";
+  if(!confirm(warning))return;
+  const typed = prompt('To confirm, type DELETE ALL');
+  if(typed !== 'DELETE ALL'){alert('Deletion cancelled.');return;}
+  const btn=document.getElementById('clearAllTestDataBtn');
+  if(btn){btn.disabled=true;btn.textContent='Deleting...';}
+  const j=await call('clearAllTestData');
+  if(btn){btn.disabled=false;btn.textContent='Delete All Employees and Attendance Records';}
+  if(!j.ok){alert(errMsg(j));return;}
+  if(!(await ensureAdmin()))return;
+  await loadPublic();
+  renderEmpList();
+  renderTable();
+  alert('All employee registrations and attendance records have been deleted. Organization settings and Admin PIN were kept.');
+}
+
+// ═══ SETTINGS (admin) ═══
+function loadSetup(){
+  const g=id=>document.getElementById(id);
+  if(g('orgName'))g('orgName').value=config.orgName;
+  if(g('startTime'))g('startTime').value=config.startTime;
+  if(g('endTime'))g('endTime').value=config.endTime;
+  if(g('graceMinutes'))g('graceMinutes').value=config.graceMinutes;
+}
+async function saveSetup(){
+  const c={orgName:document.getElementById('orgName').value.trim()||'Paroisse Nkombo',
+    startTime:document.getElementById('startTime').value||'08:00',
+    endTime:document.getElementById('endTime').value||'17:00',
+    graceMinutes:parseInt(document.getElementById('graceMinutes').value)||15};
+  const j=await call('saveConfig',{config:c});
+  if(!j.ok){alert(errMsg(j));return;}
+  config=c;
+  const msg=document.getElementById('saveMsg');msg.style.display='inline';
+  setTimeout(()=>msg.style.display='none',2500);
+}
+function resetUnenroll(){
+  selectedUnenrollEmp=null;
+  const input=document.getElementById('unenrollSearch');
+  const results=document.getElementById('unenrollResults');
+  const selected=document.getElementById('unenrollSelected');
+  if(input)input.value='';
+  if(results)results.innerHTML='';
+  if(selected)selected.style.display='none';
+}
+function searchUnenrollEmployee(){
+  const q=document.getElementById('unenrollSearch').value.trim().toLowerCase();
+  const res=document.getElementById('unenrollResults');
+  document.getElementById('unenrollSelected').style.display='none';
+  selectedUnenrollEmp=null;
+  if(q.length<2){res.innerHTML='';return;}
+  unenrollMatches=adminEmployees.filter(e=>String(e.name||'').toLowerCase().includes(q));
+  if(!unenrollMatches.length){res.innerHTML='<div style="font-size:.82rem;color:var(--gray);padding:8px;">No registered employee found.</div>';return;}
+  res.innerHTML=unenrollMatches.map((e,i)=>`<div onclick="selectUnenrollEmployee(${i})" style="padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;margin-bottom:8px;background:white;"><div style="font-weight:700;font-size:.9rem;">${esc(e.name)}</div><div style="font-size:.78rem;color:var(--gray);">${esc(e.position||'')}</div></div>`).join('');
+}
+function selectUnenrollEmployee(i){
+  selectedUnenrollEmp=unenrollMatches[i];
+  if(!selectedUnenrollEmp)return;
+  document.getElementById('unenrollResults').innerHTML='';
+  document.getElementById('unenrollSearch').value=selectedUnenrollEmp.name;
+  document.getElementById('unenrollSelName').textContent=selectedUnenrollEmp.name;
+  document.getElementById('unenrollSelPos').textContent=selectedUnenrollEmp.position||'';
+  document.getElementById('unenrollSelected').style.display='block';
+}
+async function confirmUnenrollEmployee(){
+  if(!selectedUnenrollEmp)return;
+  const employee=selectedUnenrollEmp;
+  if(!confirm(`Remove ${employee.name} from Registered Employees? Existing attendance records should remain.`))return;
+  const btn=document.getElementById('unenrollBtn');
+  btn.disabled=true;btn.textContent='Please wait...';
+  const j=await call('deleteEmployee',{name:employee.name});
+  btn.disabled=false;btn.textContent='🗑️ Remove Employee';
+  if(!j.ok){alert(errMsg(j));return;}
+  if(!(await ensureAdmin()))return;
+  await loadPublic();
+  renderEmpList();
+  resetUnenroll();
+  alert(`${employee.name} has been removed from Registered Employees.`);
+}
+
+function renderEmpList(){
+  const c=document.getElementById('empListContainer');
+  if(!adminEmployees.length){c.innerHTML=`<div class="empty-state"><div class="icon">👤</div>No employee has registered yet.</div>`;return;}
+  const rows=adminEmployees.map((e,i)=>`<tr><td>${i+1}</td><td><strong>${esc(e.name)}</strong></td><td>${esc(e.position)}</td><td>${esc(e.phone)}</td><td>${esc(e.regDate)}</td></tr>`).join('');
+  c.innerHTML=`<div class="tbl-scroll"><table><thead><tr><th>#</th><th>Name</th><th>Position</th><th>Phone</th><th>Date</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+// ═══ INIT ═══
+window.addEventListener('DOMContentLoaded',()=>{
+  renderQR();loadPublic();
+  if(location.hash==='#checkin'){
+    document.body.classList.add('employee-mode');
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.getElementById('tab-checkin').classList.add('active');
+    document.querySelectorAll('.tab')[3].classList.add('active');
+  }
+  if(location.hash==='#register'){
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.getElementById('tab-register').classList.add('active');
+    document.querySelectorAll('.tab')[1].classList.add('active');
+  }
+});
+</script>
+</body>
+</html>
